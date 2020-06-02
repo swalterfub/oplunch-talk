@@ -3,7 +3,7 @@ OP lunch talk about dynamic layers using mapserver, planetary spatial reference 
 
 Built using [revealjs](https://revealjs.com)
 
-To start the presentation, git clone and type "npm start" on the command line.
+To start the presentation, git clone and type "npm install", then "npm start" on the command line.
 
 The related javascript code for the Openlayers frontend is available under the repository [swalterfub/dynamic-mapserver-openlayers-planetary](https://github.com/swalterfub/dynamic-mapserver-openlayers-planetary)
 
