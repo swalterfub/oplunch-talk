@@ -1,0 +1,613 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Dynamic Layers</title>
+
+		<link rel="stylesheet" href="dist/reset.css">
+		<link rel="stylesheet" href="dist/reveal.css">
+		<link rel="stylesheet" href="dist/theme/black.css" id="theme">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="plugin/highlight/monokai.css" id="highlight-theme">
+		<style>
+		.reveal pre { 
+			font-size: 0.4em;
+			width: 100%;
+			max-height: 400px;
+		}
+		</style>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section><h4>Dynamic layers using</h4>
+				<h4>Mapserver,</h4>
+				<h4>Planetary spatial reference systems</h4>
+				<h4>and Python</h4>
+				<p>Sebastian Walter, Freie Universitaet Berlin</p>
+				</section>
+				<section><h4>Background: HRSC Mapserver</h4>
+				    <iframe width="90%" height="500" src="https://maps.planet.fu-berlin.de"></iframe>
+				    <p><a href="https://maps.planet.fu-berlin.de">maps.planet.fu-berlin.de</a> (Walter et al., <a href="https://doi.org/10.1029/2018EA000389">2018</a>)</p>
+				    <aside class="notes">
+				    Present large image+dtm datasets on the web
+				    Download
+				    Preview capabilities
+				    Change detection
+				    But instead of clicking you through all the details of that specific web-GIS system, I prepared a little step-by-step guide of the underlying techniques to show you the technical details.
+				    </aside>
+				</section>
+				<section data-markdown>
+					#### Requirements
+					- *Dynamic* map interface with:
+					 - Global basemaps
+					 - Single images (*dynamic* layers)
+					 - Measurements
+					 - Scalebar
+					 - Custom projections
+					 - Performance (mainly rasters, tile cache)
+					 - Open source (sustainability)
+			    </section>
+			    <section data-markdown>
+					#### Main components
+
+					- [OpenLayers](https://openlayers.org/)
+
+					- [MapServer](https://mapserver.org/products.html)
+
+					  - [MapServer Core](https://mapserver.org/documentation.html)
+
+					    - [MapScript](https://mapserver.org/mapscript/index.html)
+
+					  - [MapCache](https://mapserver.org/mapcache/index.html)
+
+				</section>
+			    <section data-markdown>
+					#### OpenLayers entry point
+
+					- [Tutorials](https://openlayers.org/en/latest/doc/tutorials/)
+
+					  - Building an OpenLayers Application
+
+					  - Node
+
+					  - Parcel as bundler
+
+					  - Javascript modules
+                </section>
+                <section>
+                  <section><h4>Openlayers parcel tutorial</h4>
+                    <iframe
+     src="https://codesandbox.io/embed/github/swalterfub/dynamic-mapserver-openlayers-planetary/tree/bundle-tutorial/?fontsize=24&hidenavigation=1&theme=dark&view=editor"
+     style="width:100%; height:500px; border:0; border-radius: 4px; overflow:hidden;"
+     title="swalterfub/dynamic-mapserver-openlayers-planetary"
+     allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+     sandbox="allow-autoplay allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+   ></iframe>
+                  <aside class="notes">Codesandbox</aside>
+                  </section>
+				</section>
+                <section>
+                  <section><h4>Custom Mars layer</h4>
+                  MapServer: mars.map
+                  <pre><code data-trim data-line-numbers="9-10, 13-28">
+                  MAP
+                  NAME "MEx/HRSC global imagery and terrain data."
+                  MAXSIZE 40960
+                  UNITS meters
+                  EXTENT -10668837.5 -5213575.0 10668900.0 5215725.0
+                  WEB
+                    METADATA
+                      wms_onlineresource  "https://maps.planet.fu-berlin.de/eqc-bin/wms?"
+                      "wms_srs" "EPSG:4326"
+                      wms_enable_request "*"
+                    END
+                  END #web
+                  LAYER
+                      NAME "MOLA-gray-hs"
+                      TYPE RASTER
+                      DATA MOLA-DTM-aeroid-hs-z3.tif
+                      PROJECTION
+                          proj=eqc
+                          lat_ts=0
+                          lat_0=0
+                          lon_0=0
+                          x_0=0
+                          y_0=0
+                          a=3396000
+                          b=3396000
+                          units=m
+                      END
+                  END #layer
+                  END #map
+                  </code></pre>
+                  </section>
+                  <section><h4>Custom Mars layer</h4>
+                  OpenLayers: index.js
+                  <pre><code data-trim data-line-numbers="2, 8-11, 17">
+                              ...
+                              import TileWMS from "ol/source/TileWMS";
+
+                              const map = new Map({
+                                target: 'map',
+                                layers: [
+                                  new TileLayer({
+                                    source: new TileWMS({
+                                      url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+                                      params: { LAYERS: "MOLA-gray-hs"}
+                                    })
+                                  })
+                                ],
+                                view: new View({
+                                  center: [0, 0],
+                                  zoom: 0,
+                                  projection: 'EPSG:4326'
+                                })
+                              });
+                          </code></pre>
+                  </section>
+                  <section>
+                  <h4>Scale line</h4>
+                  Openlayers: index.js
+                      <pre><code data-trim data-line-numbers="1, 13-17">
+    import {defaults as defaultControls, ScaleLine} from 'ol/control';
+
+    const map = new Map({
+      target: 'map',
+      layers: [
+        new TileLayer({
+          source: new TileWMS({
+            url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+            params: { LAYERS: "MOLA-gray-hs", VERSION: "1.1.1"}
+          })
+        })
+      ],
+      controls: defaultControls().extend([
+        new ScaleLine({
+          units: 'metric'
+        })
+      ]),
+      view: new View({
+        center: [0, 0],
+        zoom: 0,
+        projection: 'EPSG:4326'
+      })
+    });
+                      </code></pre>
+                  </section>
+                </section>
+                <section>
+                  <section><h4>Custom projection</h4>
+                  <p style="font-size: 50%">MapServer: /usr/share/proj/epsg</p>
+                  <pre><code data-trim>
+                    # Mars equirectangular trunc
+                    <49910> +proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396000 +b=3396000 +units=m +no_defs <>
+                    </code></pre>
+                  <p style="font-size: 50%">MapServer: mars.map</p>
+                  <pre><code data-trim data-line-numbers="9">
+                    MAP
+                    NAME "MEx/HRSC global imagery and terrain data."
+                    MAXSIZE 40960
+                    UNITS meters
+                    EXTENT -10668837.5 -5213575.0 10668900.0 5215725.0
+                    WEB
+                      METADATA
+                        wms_onlineresource  "https://maps.planet.fu-berlin.de/eqc-bin/wms?"
+                        "wms_srs" "EPSG:49910 EPSG:4326"
+                        wms_enable_request "*"
+                      END
+                    END
+                    LAYER
+                        NAME "MOLA-gray-hs"
+                        TYPE RASTER
+                        DATA MOLA-DTM-aeroid-hs-z3.tif
+                        PROJECTION
+                            proj=eqc
+                            lat_ts=0
+                            lat_0=0
+                            lon_0=0
+                            x_0=0
+                            y_0=0
+                            a=3396000
+                            b=3396000
+                            units=m
+                        END
+                    END #layer
+                    </code></pre>
+                    <aside class="notes">IAU2000:
+                  </section>
+                  <section><h4>Custom projection</h4>
+                  Openlayers: index.js
+                      <pre><code data-trim data-line-numbers="6-8,10-11,13-17,37">
+    import 'ol/ol.css';
+    import {Map, View} from 'ol';
+    import TileLayer from 'ol/layer/Tile';
+    import TileWMS from 'ol/source/TileWMS';
+    import {defaults as defaultControls, ScaleLine} from 'ol/control';
+    import {register} from 'ol/proj/proj4';
+    import {Projection} from 'ol/proj';
+    import proj4 from 'proj4';
+
+    proj4.defs('EPSG:49910', '+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396000 +b=3396000 +units=m +no_defs ');
+    register(proj4);
+
+    var projection = new Projection({
+      code: "EPSG:49910",
+      global: true,
+      extent: [-10668848.652, -5215881.563, 10668848.652, 5215881.563]
+    });
+
+    const map = new Map({
+      target: 'map',
+      layers: [
+        new TileLayer({
+          source: new TileWMS({
+            url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+            params: { LAYERS: "MOLA-gray-hs", VERSION: "1.1.1"}
+          })
+        })
+      ],
+      controls: defaultControls().extend([
+        new ScaleLine({
+          units: 'metric'
+        })
+      ]),
+      view: new View({
+        center: [0, 0],
+        zoom: 0,
+        projection: projection
+      })
+    });
+                      </code></pre>
+                  </section>
+                  <section>
+                  <h4>Mars projection</h4>
+                  Openlayers: index.js
+                      <pre><code data-trim data-line-numbers="2-3,5,13-21">
+  ...
+  import { Projection, getTransform, get } from "ol/proj";
+  import { getDistance } from "ol/sphere";
+
+  proj4.defs("EPSG:49900", "+proj=longlat +a=3396000 +b=3396000 +no_defs ");
+  proj4.defs("EPSG:49910", "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396000 +b=3396000 +units=m +no_defs ");
+  register(proj4);
+
+  var projection = new Projection({
+    code: "EPSG:49910",
+    global: true,
+    extent: [-10668848.652, -5215881.563, 10668848.652, 5215881.563],
+    getPointResolution: function(resolution, point) {
+      var toEPSG49900 = getTransform(get("EPSG:49910"), get("EPSG:49900"));
+      var vertices = [
+        point[0] - resolution / 2, point[1],
+        point[0] + resolution / 2, point[1]
+      ];
+      vertices = toEPSG49900(vertices, vertices, 2);
+      return getDistance(vertices.slice(0, 2), vertices.slice(2, 4), 3396000);
+    }
+  });
+
+  const map = new Map({
+    target: "map",
+    layers: [
+      new TileLayer({
+        source: new TileWMS({
+          url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+          params: { LAYERS: "MOLA-gray-hs" }
+        })
+      })
+    ],
+    controls: defaultControls().extend([
+      new ScaleLine({
+        units: "metric"
+      })
+    ]),
+    view: new View({
+      center: [0, 0],
+      zoom: 0,
+      projection: projection
+    })
+  });
+                      </code></pre>
+                  </section>
+                </section>
+                <section>
+                  <section><h4>Single image</h4>
+                  MapServer: 
+                      <pre><code data-trim data-line-numbers="1-15" class="mapserver">
+LAYER
+  NAME "h3286_0000.ihs.04"
+  TYPE RASTER
+        DATA hrsc/mex4/eqc/ihs/h3286_0000.ihs.04.tif
+  PROJECTION
+    "init=epsg:49910"
+  END
+  METADATA
+    "wms_enable_request" "*"
+    "wms_abstract"  "HRSC single sequence h3286_0000.ihs.04"
+    "wms_title"     "h3286_0000.ihs.04"
+  END
+END
+					</code></pre>
+                </section>
+                <section><h4>Single image layer</h4>
+                Openlayers: index.js
+					<pre><code data-trim data-line-numbers="39-44">
+import "ol/ol.css";
+import { Map, View } from "ol";
+import TileLayer from "ol/layer/Tile";
+import TileWMS from "ol/source/TileWMS";
+import { defaults as defaultControls, ScaleLine } from "ol/control";
+import { register } from "ol/proj/proj4";
+import { Projection, getTransform, get } from "ol/proj";
+import { getDistance } from "ol/sphere";
+import proj4 from "proj4";
+
+proj4.defs("EPSG:49900", "+proj=longlat +a=3396000 +b=3396000 +no_defs ");
+proj4.defs("EPSG:49910", "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396000 +b=3396000 +units=m +no_defs ");
+register(proj4);
+
+var projection = new Projection({
+  code: "EPSG:49910",
+  global: true,
+  extent: [-10668848.652, -5215881.563, 10668848.652, 5215881.563],
+  getPointResolution: function(resolution, point) {
+    var toEPSG49900 = getTransform(get("EPSG:49910"), get("EPSG:49900"));
+    var vertices = [
+      point[0] - resolution / 2, point[1],
+      point[0] + resolution / 2, point[1]
+    ];
+    vertices = toEPSG49900(vertices, vertices, 2);
+    return getDistance(vertices.slice(0, 2), vertices.slice(2, 4), 3396000);
+  }
+});
+
+const map = new Map({
+  target: "map",
+  layers: [
+    new TileLayer({
+      source: new TileWMS({
+        url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+        params: { LAYERS: "MOLA-gray-hs" }
+      })
+    }),
+    new TileLayer({
+      source: new TileWMS({
+        url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+        params: { LAYERS: "h3286_0000.ihs.04" }
+      })
+    })
+  ],
+  controls: defaultControls().extend([
+    new ScaleLine({
+      units: "metric"
+    })
+  ]),
+  view: new View({
+    center: [0, 0],
+    zoom: 0,
+    projection: projection
+  })
+});
+                      </code></pre>
+                  </section>
+                  <aside class="notes">Now, we have a couple of thousand images...</aside>
+                  <section><h4>Dynamic single image</h4>
+                  MapScript: productid.py
+                      <pre><code data-trim data-line-numbers="1-15" class="python">
+import mapscript
+
+req = mapscript.OWSRequest()
+req.loadParams()
+
+productid = req.getValueByName('PRODUCTID')
+layer = req.getValueByName('LAYERS')
+
+map = mapscript.mapObj( 'eqc-dyn.map' )
+maplayer = map.getLayerByName(layer)
+maplayer.data = str(maplayer.data) + str(productid) + '.tif'
+
+map.OWSDispatch( req )
+                      </code></pre>
+                      <aside class="notes">Mapscript has the ability to execute OGC Web Service requests nad capture the results of processing the requests</aside>
+                  </section>
+                  <section><h4>Dynamic single image layer</h4>
+                Openlayers: index.js
+					<pre><code data-trim data-line-numbers="12-17">
+...
+
+const map = new Map({
+  target: "map",
+  layers: [
+    new TileLayer({
+      source: new TileWMS({
+        url: "https://maps.planet.fu-berlin.de/eqc-bin/wms?",
+        params: { LAYERS: "MOLA-gray-hs" }
+      })
+    }),
+    new TileLayer({
+      source: new TileWMS({
+        url: "https://maps.planet.fu-berlin.de/eqc-bin/productid.py?",
+        params: { LAYERS: "hrsc4ihs", PRODUCTID: "h3286_0000.ihs.04" }
+      })
+    })
+  ],
+  controls: defaultControls().extend([
+    new ScaleLine({
+      units: "metric"
+    })
+  ]),
+  view: new View({
+    center: [0, 0],
+    zoom: 0,
+    projection: projection
+  })
+});
+                      </code></pre>
+                      <aside class="notes">I can now enter any known image string...</aside>
+                  </section>
+                  </section>
+                  <section>
+                    <section><h4>MapCache</h4>
+                    MapCache config.xml
+                      <pre><code data-trim data-line-numbers="1,5,10,13-14">
+  <source name="MOLA-gray-hs" type="wms">
+      <getmap>
+         <params>
+            <FORMAT>image/png</FORMAT>
+            <LAYERS>MOLA-gray-hs</LAYERS>
+            <TRANSPARENT>true</TRANSPARENT>
+         </params>
+      </getmap>
+      <http>
+         <url>https://maps.planet.fu-berlin.de/eqc-bin/wms</url>
+      </http>
+   </source>
+   <tileset name="MOLA-gray-hs">
+      <source>MOLA-gray-hs&lt;/source>
+      <cache>disk</cache>
+      <grid maxzoom="6">eqc</grid>
+      <format>PNGQ_FAST</format>
+      <metatile>5 5</metatile>
+      <metabuffer>10</metabuffer>
+      <expires>3600</expires>
+   </tileset>
+                      </code></pre>
+                    </section>
+                    <section><h4>MapCache</h4>
+                    MapCache config.xml
+                      <pre><code data-trim data-line-numbers="9,18-20">
+   <source name="hrsc4ihs" type="wms">
+      <getmap>
+         <params>
+            <FORMAT>image/png</FORMAT>
+            <LAYERS>hrsc4ihs</LAYERS>
+         </params>
+      </getmap>
+      <http>
+         <url>https://maps.planet.fu-berlin.de/eqc-bin/productid.py</url>
+      </http>
+   </source>
+   <tileset name="hrsc4ihs">
+      <source>hrsc4ihs</source>
+      <cache>tmpl</cache>
+      <grid maxzoom="12">eqc</grid>
+      <expires>3600</expires>
+      <auto_expire>86400</auto_expire>
+      <dimensions>
+       <dimension type="regex" name="PRODUCTID" default="abc.tif"><regex>^[a-zA-Z0-9\._]*$</regex></dimension>
+      </dimensions>
+   </tileset>
+                      </code></pre>
+                    </section>
+                    <section><h4>MapCache</h4>
+                    MapCache config.xml
+                    <pre><code data-trim data-line-numbers="6-7">
+   <grid name="eqc">
+      <metadata>
+         <title>Mars Equirectangular Sphere 3396000</title>
+      </metadata>
+      <read-only>true</read-only>
+      <srs>EPSG:49910</srs>
+      <srsalias>IAU2000:49910</srsalias>
+      <size>256 256</size>
+      <units>m</units>
+      <extent>-10668848.652 -5215881.563 10668848.652 5215881.563</extent>
+      <resolutions>41675.190046875 20837.5950234375 10418.79751171875 5209.398755859375 2604.6993779296877 1302.3496889648438 651.1748444824219 325.58742224121096 162.79371112060548 81.39685556030274 40.69842778015137 20.349213890075685 10.174606945 5.087303472 2.543651736</resolutions>
+   </grid>
+                      </code></pre>
+                    </section>
+                    <section><h4>MapCache</h4>
+                      OpenLayers: index.js
+                      <pre><code data-trim data-line-numbers="1-15" class="Javascript">
+import "ol/ol.css";
+import { Map, View } from "ol";
+import TileLayer from "ol/layer/Tile";
+import TileWMS from "ol/source/TileWMS";
+import { defaults as defaultControls, ScaleLine } from "ol/control";
+import { register } from "ol/proj/proj4";
+import { Projection, getTransform, get } from "ol/proj";
+import { getDistance } from "ol/sphere";
+import proj4 from "proj4";
+
+proj4.defs("IAU2000:49900", "+proj=longlat +a=3396000 +b=3396000 +no_defs ");
+proj4.defs(
+  "IAU2000:49910",
+  "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=3396000 +b=3396000 +units=m +no_defs "
+);
+register(proj4);
+
+var projection = new Projection({
+  code: "IAU2000:49910",
+  global: true,
+  extent: [-10668848.652, -5215881.563, 10668848.652, 5215881.563],
+  getPointResolution: function(resolution, point) {
+    var toEPSG49900 = getTransform(get("IAU2000:49910"), get("IAU2000:49900"));
+    var vertices = [
+      point[0] - resolution / 2,
+      point[1],
+      point[0] + resolution / 2,
+      point[1]
+    ];
+    vertices = toEPSG49900(vertices, vertices, 2);
+    return getDistance(vertices.slice(0, 2), vertices.slice(2, 4), 3396000);
+  }
+});
+
+const map = new Map({
+  target: "map",
+  layers: [
+    new TileLayer({
+      source: new TileWMS({
+        url: "https://maps.planet.fu-berlin.de/eqc/?",
+        params: { LAYERS: "MOLA-gray-hs" }
+      })
+    }),
+    new TileLayer({
+      source: new TileWMS({
+        url: "https://maps.planet.fu-berlin.de/eqc/?",
+        params: { LAYERS: "hrsc4ihs", PRODUCTID: "h3286_0000.ihs.04" }
+      })
+    })
+  ],
+  controls: defaultControls().extend([
+    new ScaleLine({
+      units: "metric"
+    })
+  ]),
+  view: new View({
+    center: [0, 0],
+    zoom: 0,
+    projection: projection
+  })
+});
+                      </code></pre>
+                  </section>
+                </section>
+                <section>
+                <h4>Mapscript as client</h4>
+                <img src="./mapscipt-jupyter.png"  height="100%" width="100%">
+                <p><a href="https://geopython.github.io/OWSLib/">OWSLib<aref></p>
+                </section>
+			</div>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script src="plugin/zoom/zoom.js"></script>
+		<script>
+			Reveal.initialize({
+				transition: 'none',
+				hash: true,
+                center: false,
+                controls: true,
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealZoom ]
+			});
+		</script>
+	</body>
+</html>
