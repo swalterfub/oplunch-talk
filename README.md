@@ -7,5 +7,5 @@ To start the presentation, git clone and type "npm install", then "npm start" on
 
 The presentation is then available at http://127.0.0.1:8000
 
-The related javascript code for the Openlayers frontend is available under the repository [swalterfub/dynamic-mapserver-openlayers-planetary](https://github.com/swalterfub/dynamic-mapserver-openlayers-planetary)
+The related javascript code for the OpenLayers frontend is available under the repository [swalterfub/dynamic-mapserver-openlayers-planetary](https://github.com/swalterfub/dynamic-mapserver-openlayers-planetary)
 
