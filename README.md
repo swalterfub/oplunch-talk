@@ -3,9 +3,7 @@ OpenPlanetary lunch talk about dynamic layers using mapserver, planetary spatial
 
 Built using [revealjs](https://revealjs.com)
 
-To start the presentation, git clone and type "npm install", then "npm start" on the command line.
-
-The presentation is then available at http://127.0.0.1:8000
+The online version of this presentation is available here: [https://swalterfub.github.io/oplunch-talk/](https://swalterfub.github.io/oplunch-talk/).
 
 The related javascript code for the OpenLayers frontend is available under the repository [swalterfub/dynamic-mapserver-openlayers-planetary](https://github.com/swalterfub/dynamic-mapserver-openlayers-planetary)
 
