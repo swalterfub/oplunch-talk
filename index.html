@@ -32,13 +32,6 @@
 				<section><h4>Background: HRSC Mapserver</h4>
 				    <iframe width="90%" height="500" src="https://maps.planet.fu-berlin.de"></iframe>
 				    <p><a href="https://maps.planet.fu-berlin.de">maps.planet.fu-berlin.de</a> (Walter et al., <a href="https://doi.org/10.1029/2018EA000389">2018</a>)</p>
-				    <aside class="notes">
-				    Present large image+dtm datasets on the web
-				    Download
-				    Preview capabilities
-				    Change detection
-				    But instead of clicking you through all the details of that specific web-GIS system, I prepared a little step-by-step guide of the underlying techniques to show you the technical details.
-				    </aside>
 				</section>
 				<section data-markdown>
 					#### Requirements
@@ -87,7 +80,6 @@
      allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
      sandbox="allow-autoplay allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
    ></iframe>
-                  <aside class="notes">Codesandbox</aside>
                   </section>
 				</section>
                 <section>
@@ -217,7 +209,6 @@
                         END
                     END #layer
                     </code></pre>
-                    <aside class="notes">IAU2000:
                   </section>
                   <section><h4>Custom projection</h4>
                   Openlayers: index.js
@@ -394,7 +385,6 @@ const map = new Map({
 });
                       </code></pre>
                   </section>
-                  <aside class="notes">Now, we have a couple of thousand images...</aside>
                   <section><h4>Dynamic single image</h4>
                   MapScript: productid.py
                       <pre><code data-trim data-line-numbers="1-15" class="python">
@@ -412,7 +402,6 @@ maplayer.data = str(maplayer.data) + str(productid) + '.tif'
 
 map.OWSDispatch( req )
                       </code></pre>
-                      <aside class="notes">Mapscript has the ability to execute OGC Web Service requests nad capture the results of processing the requests</aside>
                   </section>
                   <section><h4>Dynamic single image layer</h4>
                 Openlayers: index.js
@@ -447,7 +436,6 @@ const map = new Map({
   })
 });
                       </code></pre>
-                      <aside class="notes">I can now enter any known image string...</aside>
                   </section>
                   </section>
                   <section>
